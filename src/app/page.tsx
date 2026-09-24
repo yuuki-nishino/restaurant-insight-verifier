@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { analyzeReviews, type AnalyzeState } from "@/app/actions";
+import { Dashboard } from "@/app/components/Dashboard";
 import { ASPECTS } from "@/lib/jev";
 
-const initialState: AnalyzeState = { results: [] };
+const initialState: AnalyzeState = { results: [], stats: null };
 
 const SENTIMENT_LABEL: Record<string, string> = {
   positive: "ポジティブ",
@@ -21,7 +22,7 @@ export default function Home() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">ラーメン屋 口コミ分析</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            口コミを空行区切りで複数件貼り付けて「分析開始」を押すと、Jevが1件ずつアスペクト・感情・言及メニューを分類します。
+            口コミを空行2つ以上で区切って複数件貼り付け、「分析開始」を押すとJevが1件ずつアスペクト・感情・対応ガイド（返信/改善）を分類します。
             DBには保存されません（ページを離れると結果は消えます）。
           </p>
         </div>
@@ -31,7 +32,9 @@ export default function Home() {
             name="reviews"
             rows={10}
             required
-            placeholder={"スープは美味しいけど提供まで40分待った。接客も素っ気なかった\n\n（空行を挟んで次の口コミ）"}
+            placeholder={
+              "スープは美味しいけど提供まで40分待った。接客も素っ気なかった\n\n\n（空行2つを挟んで次の口コミ）"
+            }
             className="w-full rounded-lg border border-zinc-300 bg-white p-4 text-sm text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
           <button
@@ -45,9 +48,11 @@ export default function Home() {
 
         {state.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
+        {state.stats && <Dashboard stats={state.stats} />}
+
         {state.results.length > 0 && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-lg font-medium text-black dark:text-zinc-50">分類結果（{state.results.length}件）</h2>
+            <h2 className="text-lg font-medium text-black dark:text-zinc-50">口コミ別の分類（{state.results.length}件）</h2>
             {state.results.map((result, index) => (
               <div
                 key={index}
@@ -66,9 +71,24 @@ export default function Home() {
                   <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                     感情: {SENTIMENT_LABEL[result.sentiment.choice]}
                   </span>
-                  {result.menuMentioned.choice !== "none" && (
-                    <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                      メニュー: {result.menuMentioned.choice}
+                  {result.replyGuidance.thanks > 0.5 && (
+                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                      お礼推奨
+                    </span>
+                  )}
+                  {result.replyGuidance.apology > 0.5 && (
+                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                      謝罪推奨
+                    </span>
+                  )}
+                  {result.improvementGuidance.operations > 0.5 && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                      オペレーション改善
+                    </span>
+                  )}
+                  {result.improvementGuidance.menuRecipe > 0.5 && (
+                    <span className="rounded-full bg-orange-100 px-2.5 py-1 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+                      メニュー・レシピ改善
                     </span>
                   )}
                 </div>

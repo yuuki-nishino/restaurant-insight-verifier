@@ -1,17 +1,9 @@
 import { choice, noul, type JsonValue } from "@typesafe-ai/sdk";
-import { MENU_ITEMS, NO_MENU_MENTIONED, type MenuItem } from "@/lib/menu";
 import { getJevClient } from "@/lib/jev/client";
 import type { ClaimVerification, ReviewClassification } from "@/lib/jev/types";
 
-type MenuCriteria = Record<MenuItem, null> & Record<typeof NO_MENU_MENTIONED, string>;
-
 export async function liveClassifyReview(reviewText: string): Promise<ReviewClassification> {
   const client = getJevClient();
-
-  const menuCriteria = {
-    ...(Object.fromEntries(MENU_ITEMS.map((item) => [item, null])) as Record<MenuItem, null>),
-    [NO_MENU_MENTIONED]: "特定のメニュー名の言及なし",
-  } satisfies MenuCriteria;
 
   const response = await client.systemOne({
     state: { review_text: reviewText },
@@ -26,7 +18,12 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
         negative: "総合的に不満・批判的",
         neutral: "感情的な評価が読み取れない、または中立",
       }),
-      menu_mentioned: choice("この口コミで具体的に言及されているメニューはどれか", menuCriteria),
+      reply_thanks: noul("この口コミの内容に対して、店側は感謝を伝える返信をすべきか"),
+      reply_apology: noul("この口コミの内容に対して、店側は謝罪を伝える返信をすべきか"),
+      improvement_operations: noul(
+        "この口コミから、接客・待ち時間・清潔さなど店舗オペレーションの改善点が読み取れるか",
+      ),
+      improvement_menu_recipe: noul("この口コミから、メニューやレシピ（味・内容）の改善点が読み取れるか"),
     },
   });
 
@@ -43,9 +40,13 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
       choice: response.answers.sentiment.choice,
       confidence: response.answers.sentiment.confidence,
     },
-    menuMentioned: {
-      choice: response.answers.menu_mentioned.choice,
-      confidence: response.answers.menu_mentioned.confidence,
+    replyGuidance: {
+      thanks: response.answers.reply_thanks.noul,
+      apology: response.answers.reply_apology.noul,
+    },
+    improvementGuidance: {
+      operations: response.answers.improvement_operations.noul,
+      menuRecipe: response.answers.improvement_menu_recipe.noul,
     },
   };
 }

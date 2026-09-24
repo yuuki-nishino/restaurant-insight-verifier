@@ -10,9 +10,11 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
 
 - エンドポイント: `POST https://api.typesafe.ai/v1/systemone`（認証は`Authorization: Bearer $TYPESAFE_API_KEY`）
 - JS SDK: `@typesafe-ai/sdk`。`new TypeSafeClient()`が環境変数`TYPESAFE_API_KEY`を読む。`client.systemOne({ state, questions })`で呼び出す
-- 1回のリクエストで複数の質問（Choice/Score/Noulを混在可）をまとめて送れる。分類クエリはアスペクト×5のNoul＋感情のChoice＋メニューのChoiceを1リクエストにまとめる
+- 1回のリクエストで複数の質問（Choice/Score/Noulを混在可）をまとめて送れる。分類クエリはアスペクト×5＋対応ガイド×4のNoul＋感情のChoiceを1リクエストにまとめる
 
 ### ① 分類クエリ（口コミ1件ごと）
+
+メニュー言及の分類（Choice）は誤分類が多く廃止した。代わりに、店主が次に取るべきアクションを判定する「対応ガイド」を追加している（[ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)）。
 
 **state**
 
@@ -24,7 +26,9 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
 
 - アスペクト（`味` / `接客` / `待ち時間` / `清潔さ` / `コスパ`の5項目）: それぞれ独立したNoul。「その他」バケツは作らず、どのアスペクトも該当しない場合は「特定のアスペクトへの言及なし」として扱う（[ADR-0003](./decisions/0003-jev-primitive-mapping.md)）
 - `sentiment`: Choice（`positive` / `negative` / `neutral`）
-- `menu_mentioned`: Choice（固定のメニュー名リスト + `none`。リストは `src/lib/menu.ts` で管理）
+- 対応ガイド（[ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)）: それぞれ独立したNoul。同じ口コミで複数該当しうる
+  - `reply_thanks` / `reply_apology`: 感謝・謝罪の返信をすべきか
+  - `improvement_operations` / `improvement_menu_recipe`: オペレーション・メニューレシピの改善点が読み取れるか
 
 ```json
 {
@@ -41,11 +45,10 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
       "instructions": "この口コミ全体の感情はどれに近いか",
       "criteria": { "positive": "総合的に好意的・満足", "negative": "総合的に不満・批判的", "neutral": "感情的な評価が読み取れない、または中立" }
     },
-    "menu_mentioned": {
-      "type": "choice",
-      "instructions": "この口コミで具体的に言及されているメニューはどれか",
-      "criteria": { "醤油ラーメン": null, "味噌ラーメン": null, "塩ラーメン": null, "とんこつラーメン": null, "つけ麺": null, "餃子": null, "チャーシュー丼": null, "none": "特定のメニュー名の言及なし" }
-    }
+    "reply_thanks": { "type": "noul", "instructions": "この口コミの内容に対して、店側は感謝を伝える返信をすべきか" },
+    "reply_apology": { "type": "noul", "instructions": "この口コミの内容に対して、店側は謝罪を伝える返信をすべきか" },
+    "improvement_operations": { "type": "noul", "instructions": "この口コミから、接客・待ち時間・清潔さなど店舗オペレーションの改善点が読み取れるか" },
+    "improvement_menu_recipe": { "type": "noul", "instructions": "この口コミから、メニューやレシピ（味・内容）の改善点が読み取れるか" }
   }
 }
 ```
@@ -67,17 +70,15 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
       "confidence": 0.72,
       "probabilities": { "positive": 0.1, "negative": 0.72, "neutral": 0.18 }
     },
-    "menu_mentioned": {
-      "type": "choice",
-      "choice": "none",
-      "confidence": 0.95,
-      "probabilities": { "醤油ラーメン": 0.02, "味噌ラーメン": 0.0, "塩ラーメン": 0.0, "とんこつラーメン": 0.0, "つけ麺": 0.0, "餃子": 0.0, "チャーシュー丼": 0.03, "none": 0.95 }
-    }
+    "reply_thanks": { "type": "noul", "noul": 0.6 },
+    "reply_apology": { "type": "noul", "noul": 0.85 },
+    "improvement_operations": { "type": "noul", "noul": 0.8 },
+    "improvement_menu_recipe": { "type": "noul", "noul": 0.1 }
   }
 }
 ```
 
-コード側でNoul値をしきい値（例: 0.5超）で判定し、該当アスペクトの配列に変換する。
+コード側で各Noul値をしきい値（0.5超）で判定し、アスペクト配列や対応ガイドのフラグに変換する（`src/lib/aggregate.ts`）。
 
 ### ② 検証クエリ（LLMのインサイト文チェック）
 
@@ -119,7 +120,7 @@ MVP実装時点でJevの一般公開APIが利用できない場合は、同じ�
 
 ## LLM（Claude API）仕様
 
-呼び出しは分析実行1回につき1回のみ。入力はJevの分類結果を集計したJSON（アスペクト別件数、メニュー別言及数、感情の内訳など）。
+呼び出しは分析実行1回につき1回のみ。入力はJevの分類結果を集計したJSON（アスペクト別件数、感情の内訳、対応ガイド別件数など）。
 
 **プロンプト方針**
 
@@ -135,3 +136,4 @@ MVP実装時点でJevの一般公開APIが利用できない場合は、同じ�
 - 入出力に関わるデータの型: [data-model.md](./data-model.md)
 - DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
 - Jevの実プリミティブへのマッピング: [decisions/0003-jev-primitive-mapping.md](./decisions/0003-jev-primitive-mapping.md)
+- 対応ガイド分類の追加とメニュー分類の廃止: [decisions/0004-action-guidance-replaces-menu.md](./decisions/0004-action-guidance-replaces-menu.md)

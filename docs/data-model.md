@@ -14,7 +14,7 @@ type ReviewInput = {
 
 ## Jev分類結果（口コミ1件ごと）
 
-Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](./decisions/0003-jev-primitive-mapping.md) を参照。
+Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](./decisions/0003-jev-primitive-mapping.md)、対応ガイド分類（メニュー分類の廃止）は [ADR-0004](./decisions/0004-action-guidance-replaces-menu.md) を参照。
 
 ```ts
 type Aspect = "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ";
@@ -24,19 +24,23 @@ type ReviewClassification = {
   // 各アスペクトはNoul（0〜1の確率）。しきい値0.5超で「言及あり」と判定する
   aspectScores: Record<Aspect, number>;
   sentiment: { choice: "positive" | "negative" | "neutral"; confidence: number };
-  // 固定メニューリスト（src/lib/menu.ts）からのChoice。言及なしは "none"
-  menuMentioned: { choice: string; confidence: number };
+  // Noul。同じ口コミで両方高いこともある（例: 味は良いが接客が悪い）
+  replyGuidance: { thanks: number; apology: number };
+  improvementGuidance: { operations: number; menuRecipe: number };
 };
 ```
 
 ## 集計結果（全件のReviewClassificationから計算）
 
+しきい値0.5超をカウントする。実装は `src/lib/aggregate.ts` の `aggregateReviewClassifications`。
+
 ```ts
 type AggregatedStats = {
   totalReviews: number;
-  byAspect: Record<string, { count: number; positive: number; negative: number; neutral: number }>;
-  byMenu: Record<string, number>;
-  sentimentBreakdown: { positive: number; negative: number; neutral: number };
+  aspectCounts: Record<Aspect, number>;
+  sentimentCounts: { positive: number; negative: number; neutral: number };
+  replyGuidanceCounts: { thanks: number; apology: number };
+  improvementGuidanceCounts: { operations: number; menuRecipe: number };
 };
 ```
 
@@ -66,3 +70,4 @@ type ClaimVerification = {
 - 各ステージのAPI仕様: [api-spec.md](./api-spec.md)
 - DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
 - Jevの実プリミティブへのマッピング: [decisions/0003-jev-primitive-mapping.md](./decisions/0003-jev-primitive-mapping.md)
+- 対応ガイド分類の追加とメニュー分類の廃止: [decisions/0004-action-guidance-replaces-menu.md](./decisions/0004-action-guidance-replaces-menu.md)
