@@ -20,7 +20,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col items-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex w-full max-w-3xl flex-col gap-8 px-6 py-16">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">ラーメン屋 口コミ分析</h1>
+          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">飲食店 口コミ分析</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             口コミを空行2つ以上で区切って複数件貼り付け、「分析開始」を押すとJevが1件ずつアスペクト・感情・対応ガイド（返信/改善）を分類します。
             DBには保存されません（ページを離れると結果は消えます）。
