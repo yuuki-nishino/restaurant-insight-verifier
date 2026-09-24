@@ -10,11 +10,11 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
 
 - エンドポイント: `POST https://api.typesafe.ai/v1/systemone`（認証は`Authorization: Bearer $TYPESAFE_API_KEY`）
 - JS SDK: `@typesafe-ai/sdk`。`new TypeSafeClient()`が環境変数`TYPESAFE_API_KEY`を読む。`client.systemOne({ state, questions })`で呼び出す
-- 1回のリクエストで複数の質問（Choice/Score/Noulを混在可）をまとめて送れる。分類クエリはアスペクト×5＋対応ガイド×4のNoul＋感情のChoiceを1リクエストにまとめる
+- 1回のリクエストで複数の質問（Choice/Score/Noulを混在可）をまとめて送れる。分類クエリはアスペクト×7＋感情×2＋対応ガイド×4、計13個のNoulを1リクエストにまとめる（Choiceは使わない）
 
 ### ① 分類クエリ（口コミ1件ごと）
 
-メニュー言及の分類（Choice）は誤分類が多く廃止した。代わりに、店主が次に取るべきアクションを判定する「対応ガイド」を追加している（[ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)）。
+メニュー言及の分類（Choice）は誤分類が多く廃止した。代わりに、店主が次に取るべきアクションを判定する「対応ガイド」を追加している（[ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)）。感情も単一のChoiceではなく独立した2つのNoulに分解し、「賛否混在」を区別できるようにしている（[ADR-0005](./decisions/0005-sentiment-mixed-and-more-aspects.md)）。
 
 **state**
 
@@ -24,8 +24,8 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
 
 **questions**
 
-- アスペクト（`味` / `接客` / `待ち時間` / `清潔さ` / `コスパ`の5項目）: それぞれ独立したNoul。「その他」バケツは作らず、どのアスペクトも該当しない場合は「特定のアスペクトへの言及なし」として扱う（[ADR-0003](./decisions/0003-jev-primitive-mapping.md)）
-- `sentiment`: Choice（`positive` / `negative` / `neutral`）
+- アスペクト（`味` / `接客` / `待ち時間` / `清潔さ` / `コスパ` / `見た目` / `ニオイ`の7項目）: それぞれ独立したNoul。「その他」バケツは作らず、どのアスペクトも該当しない場合は「特定のアスペクトへの言及なし」として扱う（[ADR-0003](./decisions/0003-jev-primitive-mapping.md)）
+- 感情（[ADR-0005](./decisions/0005-sentiment-mixed-and-more-aspects.md)）: `sentiment_positive` / `sentiment_negative`の独立した2つのNoul。両方0.5超なら「賛否混在」、片方のみなら`positive`/`negative`、どちらも0.5以下なら`neutral`とコード側で導出する
 - 対応ガイド（[ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)）: それぞれ独立したNoul。同じ口コミで複数該当しうる
   - `reply_thanks` / `reply_apology`: 感謝・謝罪の返信をすべきか
   - `improvement_operations` / `improvement_menu_recipe`: オペレーション・メニューレシピの改善点が読み取れるか
@@ -40,11 +40,10 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
     "aspect_wait_time": { "type": "noul", "instructions": "この口コミは「待ち時間」について言及しているか" },
     "aspect_cleanliness": { "type": "noul", "instructions": "この口コミは「清潔さ」について言及しているか" },
     "aspect_cost_performance": { "type": "noul", "instructions": "この口コミは「コスパ」について言及しているか" },
-    "sentiment": {
-      "type": "choice",
-      "instructions": "この口コミ全体の感情はどれに近いか",
-      "criteria": { "positive": "総合的に好意的・満足", "negative": "総合的に不満・批判的", "neutral": "感情的な評価が読み取れない、または中立" }
-    },
+    "aspect_appearance": { "type": "noul", "instructions": "この口コミは料理の「見た目・盛り付け」について言及しているか" },
+    "aspect_smell": { "type": "noul", "instructions": "この口コミは「ニオイ・香り」について言及しているか" },
+    "sentiment_positive": { "type": "noul", "instructions": "この口コミは好意的・肯定的な内容を含んでいるか" },
+    "sentiment_negative": { "type": "noul", "instructions": "この口コミは批判的・否定的な内容を含んでいるか" },
     "reply_thanks": { "type": "noul", "instructions": "この口コミの内容に対して、店側は感謝を伝える返信をすべきか" },
     "reply_apology": { "type": "noul", "instructions": "この口コミの内容に対して、店側は謝罪を伝える返信をすべきか" },
     "improvement_operations": { "type": "noul", "instructions": "この口コミから、接客・待ち時間・清潔さなど店舗オペレーションの改善点が読み取れるか" },
@@ -64,12 +63,10 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
     "aspect_wait_time": { "type": "noul", "noul": 0.88 },
     "aspect_cleanliness": { "type": "noul", "noul": 0.05 },
     "aspect_cost_performance": { "type": "noul", "noul": 0.1 },
-    "sentiment": {
-      "type": "choice",
-      "choice": "negative",
-      "confidence": 0.72,
-      "probabilities": { "positive": 0.1, "negative": 0.72, "neutral": 0.18 }
-    },
+    "aspect_appearance": { "type": "noul", "noul": 0.15 },
+    "aspect_smell": { "type": "noul", "noul": 0.05 },
+    "sentiment_positive": { "type": "noul", "noul": 0.6 },
+    "sentiment_negative": { "type": "noul", "noul": 0.72 },
     "reply_thanks": { "type": "noul", "noul": 0.6 },
     "reply_apology": { "type": "noul", "noul": 0.85 },
     "improvement_operations": { "type": "noul", "noul": 0.8 },
@@ -78,7 +75,7 @@ Jevの実際の仕様は [ADR-0003](./decisions/0003-jev-primitive-mapping.md) �
 }
 ```
 
-コード側で各Noul値をしきい値（0.5超）で判定し、アスペクト配列や対応ガイドのフラグに変換する（`src/lib/aggregate.ts`）。
+上の例は`sentiment_positive`（0.6）と`sentiment_negative`（0.72）が両方0.5を超えているため「賛否混在（mixed）」と判定される（スープは褒めつつ、待ち時間・接客には不満）。コード側で各Noul値をしきい値（0.5超）で判定し、アスペクト配列・感情ラベル・対応ガイドのフラグに変換する（`src/lib/jev/types.ts`の`deriveSentimentLabel`、`src/lib/aggregate.ts`）。
 
 ### ② 検証クエリ（LLMのインサイト文チェック）
 
@@ -137,3 +134,4 @@ MVP実装時点でJevの一般公開APIが利用できない場合は、同じ�
 - DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
 - Jevの実プリミティブへのマッピング: [decisions/0003-jev-primitive-mapping.md](./decisions/0003-jev-primitive-mapping.md)
 - 対応ガイド分類の追加とメニュー分類の廃止: [decisions/0004-action-guidance-replaces-menu.md](./decisions/0004-action-guidance-replaces-menu.md)
+- 感情の再設計（賛否混在の区別）とアスペクト追加: [decisions/0005-sentiment-mixed-and-more-aspects.md](./decisions/0005-sentiment-mixed-and-more-aspects.md)

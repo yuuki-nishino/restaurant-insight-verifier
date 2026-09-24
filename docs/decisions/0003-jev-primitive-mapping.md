@@ -1,7 +1,7 @@
 # ADR-0003: Jevの実際のプリミティブ（Choice/Score/Noul）への設計マッピング
 
 日付: 2026-09-24
-ステータス: 承認（メニュー分類部分は[ADR-0004](./0004-action-guidance-replaces-menu.md)で廃止・置き換え）
+ステータス: 承認（メニュー分類部分は[ADR-0004](./0004-action-guidance-replaces-menu.md)、感情部分は[ADR-0005](./0005-sentiment-mixed-and-more-aspects.md)で廃止・置き換え）
 
 ## コンテキスト
 

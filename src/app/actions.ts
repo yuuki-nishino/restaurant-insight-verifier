@@ -1,7 +1,7 @@
 "use server";
 
 import { aggregateReviewClassifications, type AggregatedStats } from "@/lib/aggregate";
-import { classifyReview, getJevMode, type JevMode, type ReviewClassification } from "@/lib/jev";
+import { classifyReview, type ReviewClassification } from "@/lib/jev";
 
 export type ProcessingTiming = {
   reviewCount: number;
@@ -13,11 +13,10 @@ export type AnalyzeState = {
   results: ReviewClassification[];
   stats: AggregatedStats | null;
   timing: ProcessingTiming | null;
-  mode: JevMode | null;
   error?: string;
 };
 
-const initialState: AnalyzeState = { results: [], stats: null, timing: null, mode: null };
+const initialState: AnalyzeState = { results: [], stats: null, timing: null };
 
 // 口コミ同士は空行2つ以上（=改行3つ以上）で区切る。取得元データに紛れ込む
 // 意図しない単一の空行は、口コミ本文の一部として扱われる。
@@ -56,6 +55,5 @@ export async function analyzeReviews(_prevState: AnalyzeState, formData: FormDat
     results,
     stats: aggregateReviewClassifications(results),
     timing: { reviewCount: results.length, totalMs, avgPerReviewMs },
-    mode: getJevMode(),
   };
 }

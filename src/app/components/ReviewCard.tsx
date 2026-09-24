@@ -1,9 +1,10 @@
-import { ASPECTS, type ReviewClassification, type SentimentChoice } from "@/lib/jev";
+import { ASPECTS, type ReviewClassification, type SentimentLabel } from "@/lib/jev";
 
-const SENTIMENT_LABEL: Record<SentimentChoice, string> = {
+const SENTIMENT_LABEL: Record<SentimentLabel, string> = {
   positive: "ポジティブ",
   negative: "ネガティブ",
   neutral: "ニュートラル",
+  mixed: "賛否混在",
 };
 
 type Tone = "neutral" | "info" | "good" | "critical" | "warning" | "serious";
@@ -51,18 +52,21 @@ export function ReviewCard({ result }: { result: ReviewClassification }) {
 
       <div className="flex flex-col gap-1.5">
         <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-          感情（Jev / Choice）
+          感情（Jev / Noul ×2 → {SENTIMENT_LABEL[result.sentiment.label]}）
         </span>
         <div className="flex flex-wrap gap-1.5 text-xs">
-          {(Object.keys(SENTIMENT_LABEL) as SentimentChoice[]).map((key) => (
-            <PercentChip
-              key={key}
-              label={SENTIMENT_LABEL[key]}
-              value={result.sentiment.probabilities[key]}
-              tone={key === "positive" ? "good" : key === "negative" ? "critical" : "neutral"}
-              highlighted={result.sentiment.choice === key}
-            />
-          ))}
+          <PercentChip
+            label="好意的"
+            value={result.sentiment.positiveScore}
+            tone="good"
+            highlighted={result.sentiment.positiveScore > 0.5}
+          />
+          <PercentChip
+            label="批判的"
+            value={result.sentiment.negativeScore}
+            tone="critical"
+            highlighted={result.sentiment.negativeScore > 0.5}
+          />
         </div>
       </div>
 

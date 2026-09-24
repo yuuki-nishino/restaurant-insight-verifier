@@ -1,6 +1,6 @@
-import { choice, noul, type JsonValue } from "@typesafe-ai/sdk";
+import { noul, type JsonValue } from "@typesafe-ai/sdk";
 import { getJevClient } from "@/lib/jev/client";
-import type { ClaimVerification, ReviewClassification } from "@/lib/jev/types";
+import { deriveSentimentLabel, type ClaimVerification, type ReviewClassification } from "@/lib/jev/types";
 
 export async function liveClassifyReview(reviewText: string): Promise<ReviewClassification> {
   const client = getJevClient();
@@ -13,11 +13,10 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
       aspect_wait_time: noul("この口コミは「待ち時間」について言及しているか"),
       aspect_cleanliness: noul("この口コミは「清潔さ」について言及しているか"),
       aspect_cost_performance: noul("この口コミは「コスパ」について言及しているか"),
-      sentiment: choice("この口コミ全体の感情はどれに近いか", {
-        positive: "総合的に好意的・満足",
-        negative: "総合的に不満・批判的",
-        neutral: "感情的な評価が読み取れない、または中立",
-      }),
+      aspect_appearance: noul("この口コミは料理の「見た目・盛り付け」について言及しているか"),
+      aspect_smell: noul("この口コミは「ニオイ・香り」について言及しているか"),
+      sentiment_positive: noul("この口コミは好意的・肯定的な内容を含んでいるか"),
+      sentiment_negative: noul("この口コミは批判的・否定的な内容を含んでいるか"),
       reply_thanks: noul("この口コミの内容に対して、店側は感謝を伝える返信をすべきか"),
       reply_apology: noul("この口コミの内容に対して、店側は謝罪を伝える返信をすべきか"),
       improvement_operations: noul(
@@ -27,6 +26,9 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
     },
   });
 
+  const positiveScore = response.answers.sentiment_positive.noul;
+  const negativeScore = response.answers.sentiment_negative.noul;
+
   return {
     reviewText,
     aspectScores: {
@@ -35,11 +37,13 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
       待ち時間: response.answers.aspect_wait_time.noul,
       清潔さ: response.answers.aspect_cleanliness.noul,
       コスパ: response.answers.aspect_cost_performance.noul,
+      見た目: response.answers.aspect_appearance.noul,
+      ニオイ: response.answers.aspect_smell.noul,
     },
     sentiment: {
-      choice: response.answers.sentiment.choice,
-      confidence: response.answers.sentiment.confidence,
-      probabilities: response.answers.sentiment.probabilities,
+      label: deriveSentimentLabel(positiveScore, negativeScore),
+      positiveScore,
+      negativeScore,
     },
     replyGuidance: {
       thanks: response.answers.reply_thanks.noul,

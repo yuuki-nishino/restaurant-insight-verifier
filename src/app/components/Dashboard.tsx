@@ -7,9 +7,16 @@ const ASPECT_COLOR_VAR: Record<Aspect, string> = {
   待ち時間: "var(--series-3)",
   清潔さ: "var(--series-4)",
   コスパ: "var(--series-5)",
+  見た目: "var(--series-6)",
+  ニオイ: "var(--series-7)",
 };
 
-const SENTIMENT_LABEL = { positive: "ポジティブ", neutral: "ニュートラル", negative: "ネガティブ" } as const;
+const SENTIMENT_LABEL = {
+  positive: "ポジティブ",
+  neutral: "ニュートラル",
+  mixed: "賛否混在",
+  negative: "ネガティブ",
+} as const;
 
 export function Dashboard({ stats }: { stats: AggregatedStats }) {
   const { totalReviews } = stats;
@@ -29,6 +36,8 @@ export function Dashboard({ stats }: { stats: AggregatedStats }) {
           --series-3: #1baf7a;
           --series-4: #eda100;
           --series-5: #e87ba4;
+          --series-6: #008300;
+          --series-7: #4a3aa7;
           --status-good: #0ca30c;
           --status-warning: #fab219;
           --status-serious: #ec835a;
@@ -46,6 +55,8 @@ export function Dashboard({ stats }: { stats: AggregatedStats }) {
             --series-3: #199e70;
             --series-4: #c98500;
             --series-5: #d55181;
+            --series-6: #008300;
+            --series-7: #9085e9;
           }
         }
       `}</style>
@@ -81,6 +92,7 @@ export function Dashboard({ stats }: { stats: AggregatedStats }) {
           {(
             [
               ["positive", stats.sentimentCounts.positive, "var(--status-good)"],
+              ["mixed", stats.sentimentCounts.mixed, "var(--status-warning)"],
               ["neutral", stats.sentimentCounts.neutral, "var(--text-muted)"],
               ["negative", stats.sentimentCounts.negative, "var(--status-critical)"],
             ] as const
@@ -96,6 +108,7 @@ export function Dashboard({ stats }: { stats: AggregatedStats }) {
         </div>
         <div className="flex flex-wrap gap-4 text-xs text-[var(--text-secondary)]">
           <LegendDot color="var(--status-good)" label={`ポジティブ ${stats.sentimentCounts.positive}件`} />
+          <LegendDot color="var(--status-warning)" label={`賛否混在 ${stats.sentimentCounts.mixed}件`} />
           <LegendDot color="var(--text-muted)" label={`ニュートラル ${stats.sentimentCounts.neutral}件`} />
           <LegendDot color="var(--status-critical)" label={`ネガティブ ${stats.sentimentCounts.negative}件`} />
         </div>

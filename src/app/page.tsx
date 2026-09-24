@@ -5,10 +5,10 @@ import { analyzeReviews, type AnalyzeState } from "@/app/actions";
 import { Dashboard } from "@/app/components/Dashboard";
 import { ReviewCard } from "@/app/components/ReviewCard";
 
-const initialState: AnalyzeState = { results: [], stats: null, timing: null, mode: null };
+const initialState: AnalyzeState = { results: [], stats: null, timing: null };
 
 function formatSeconds(ms: number): string {
-  return (ms / 1000).toFixed(1);
+  return (ms / 1000).toFixed(2);
 }
 
 export default function Home() {
@@ -46,20 +46,13 @@ export default function Home() {
 
         {state.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
-        {state.timing && state.mode && (
+        {state.timing && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            <span
-              className={`rounded-full px-2 py-0.5 font-medium ${
-                state.mode === "live"
-                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-              }`}
-            >
-              {state.mode === "live" ? "Jev API（実接続）" : "モック分類（Jev未接続）"}
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+              Jev API
             </span>
-            <span>
-              {state.timing.reviewCount}件を{formatSeconds(state.timing.totalMs)}秒で処理（1件あたり平均
-              {" "}
+            <span className="tabular-nums">
+              {state.timing.reviewCount}件を{formatSeconds(state.timing.totalMs)}秒で処理（1件あたり平均{" "}
               {formatSeconds(state.timing.avgPerReviewMs)}秒）
             </span>
           </div>

@@ -14,22 +14,19 @@ type ReviewInput = {
 
 ## Jev分類結果（口コミ1件ごと）
 
-Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](./decisions/0003-jev-primitive-mapping.md)、対応ガイド分類（メニュー分類の廃止）は [ADR-0004](./decisions/0004-action-guidance-replaces-menu.md) を参照。
+Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](./decisions/0003-jev-primitive-mapping.md)、対応ガイド分類（メニュー分類の廃止）は [ADR-0004](./decisions/0004-action-guidance-replaces-menu.md)、感情の再設計（賛否混在の区別）とアスペクト追加は [ADR-0005](./decisions/0005-sentiment-mixed-and-more-aspects.md) を参照。
 
 ```ts
-type Aspect = "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ";
+type Aspect = "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ" | "見た目" | "ニオイ";
 
-type SentimentChoice = "positive" | "negative" | "neutral";
+type SentimentLabel = "positive" | "negative" | "neutral" | "mixed";
 
 type ReviewClassification = {
   reviewText: string;
   // 各アスペクトはNoul（0〜1の確率）。しきい値0.5超で「言及あり」と判定する
   aspectScores: Record<Aspect, number>;
-  sentiment: {
-    choice: SentimentChoice;
-    confidence: number;
-    probabilities: Record<SentimentChoice, number>; // UIで全項目のパーセンテージを表示するため保持
-  };
+  // 「好意的か」「批判的か」は独立したNoul。両方0.5超なら mixed（賛否混在）
+  sentiment: { label: SentimentLabel; positiveScore: number; negativeScore: number };
   // Noul。同じ口コミで両方高いこともある（例: 味は良いが接客が悪い）
   replyGuidance: { thanks: number; apology: number };
   improvementGuidance: { operations: number; menuRecipe: number };
@@ -44,7 +41,7 @@ type ReviewClassification = {
 type AggregatedStats = {
   totalReviews: number;
   aspectCounts: Record<Aspect, number>;
-  sentimentCounts: { positive: number; negative: number; neutral: number };
+  sentimentCounts: { positive: number; negative: number; neutral: number; mixed: number };
   replyGuidanceCounts: { thanks: number; apology: number };
   improvementGuidanceCounts: { operations: number; menuRecipe: number };
 };
@@ -77,3 +74,4 @@ type ClaimVerification = {
 - DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
 - Jevの実プリミティブへのマッピング: [decisions/0003-jev-primitive-mapping.md](./decisions/0003-jev-primitive-mapping.md)
 - 対応ガイド分類の追加とメニュー分類の廃止: [decisions/0004-action-guidance-replaces-menu.md](./decisions/0004-action-guidance-replaces-menu.md)
+- 感情の再設計（賛否混在の区別）とアスペクト追加: [decisions/0005-sentiment-mixed-and-more-aspects.md](./decisions/0005-sentiment-mixed-and-more-aspects.md)
