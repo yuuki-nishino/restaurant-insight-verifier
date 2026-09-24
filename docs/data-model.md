@@ -19,11 +19,17 @@ Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](
 ```ts
 type Aspect = "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ";
 
+type SentimentChoice = "positive" | "negative" | "neutral";
+
 type ReviewClassification = {
   reviewText: string;
   // 各アスペクトはNoul（0〜1の確率）。しきい値0.5超で「言及あり」と判定する
   aspectScores: Record<Aspect, number>;
-  sentiment: { choice: "positive" | "negative" | "neutral"; confidence: number };
+  sentiment: {
+    choice: SentimentChoice;
+    confidence: number;
+    probabilities: Record<SentimentChoice, number>; // UIで全項目のパーセンテージを表示するため保持
+  };
   // Noul。同じ口コミで両方高いこともある（例: 味は良いが接客が悪い）
   replyGuidance: { thanks: number; apology: number };
   improvementGuidance: { operations: number; menuRecipe: number };

@@ -39,6 +39,7 @@ export async function liveClassifyReview(reviewText: string): Promise<ReviewClas
     sentiment: {
       choice: response.answers.sentiment.choice,
       confidence: response.answers.sentiment.confidence,
+      probabilities: response.answers.sentiment.probabilities,
     },
     replyGuidance: {
       thanks: response.answers.reply_thanks.noul,

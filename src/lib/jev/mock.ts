@@ -25,11 +25,17 @@ export function mockClassifyReview(reviewText: string): ReviewClassification {
   const positiveHit = keywordHit(reviewText, POSITIVE_KEYWORDS);
   const negativeHit = keywordHit(reviewText, NEGATIVE_KEYWORDS);
   const sentimentChoice = positiveHit && !negativeHit ? "positive" : negativeHit && !positiveHit ? "negative" : "neutral";
+  const sentimentProbabilities =
+    sentimentChoice === "positive"
+      ? { positive: 0.6, negative: 0.1, neutral: 0.3 }
+      : sentimentChoice === "negative"
+        ? { positive: 0.1, negative: 0.6, neutral: 0.3 }
+        : { positive: 0.2, negative: 0.2, neutral: 0.6 };
 
   return {
     reviewText,
     aspectScores,
-    sentiment: { choice: sentimentChoice, confidence: 0.6 },
+    sentiment: { choice: sentimentChoice, confidence: 0.6, probabilities: sentimentProbabilities },
     replyGuidance: {
       thanks: positiveHit ? 0.85 : 0.1,
       apology: negativeHit ? 0.85 : 0.1,
