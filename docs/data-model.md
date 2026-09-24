@@ -14,12 +14,18 @@ type ReviewInput = {
 
 ## Jev分類結果（口コミ1件ごと）
 
+Jevの実プリミティブ（Choice/Noul）へのマッピングは [ADR-0003](./decisions/0003-jev-primitive-mapping.md) を参照。
+
 ```ts
+type Aspect = "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ";
+
 type ReviewClassification = {
   reviewText: string;
-  aspect: { label: "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ" | "その他"; confidence: number }[];
-  sentiment: { label: "positive" | "negative" | "neutral"; confidence: number };
-  menuMentioned: string | null;
+  // 各アスペクトはNoul（0〜1の確率）。しきい値0.5超で「言及あり」と判定する
+  aspectScores: Record<Aspect, number>;
+  sentiment: { choice: "positive" | "negative" | "neutral"; confidence: number };
+  // 固定メニューリスト（src/lib/menu.ts）からのChoice。言及なしは "none"
+  menuMentioned: { choice: string; confidence: number };
 };
 ```
 
@@ -45,12 +51,12 @@ type InsightClaim = {
 
 ## Jev検証結果（インサイトの主張ごと）
 
+`isSupportedProbability`はNoulの生値（0〜1）。0.5から離れているほど確信度が高いとみなし、0.3〜0.7は「要確認」として表示する。
+
 ```ts
 type ClaimVerification = {
   claimText: string;
-  isSupported: boolean;
-  confidence: number;
-  note?: string;
+  isSupportedProbability: number;
 };
 ```
 
@@ -59,3 +65,4 @@ type ClaimVerification = {
 - 全体設計: [architecture.md](./architecture.md)
 - 各ステージのAPI仕様: [api-spec.md](./api-spec.md)
 - DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
+- Jevの実プリミティブへのマッピング: [decisions/0003-jev-primitive-mapping.md](./decisions/0003-jev-primitive-mapping.md)
