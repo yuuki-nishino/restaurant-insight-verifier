@@ -17,12 +17,12 @@
 | ファイル                          | 内容                                                     |
 | --------------------------------- | -------------------------------------------------------- |
 | `docs/architecture.md`            | 目的・データフロー・技術スタック・画面構成               |
-| `docs/data-model.md`              | Supabaseのテーブル定義                                   |
+| `docs/data-model.md`              | 処理ステージ間でやり取りするデータの型（DBは持たない）    |
 | `docs/api-spec.md`                | Jev API / Claude API の入出力スキーマとプロンプト方針     |
 | `docs/decisions/`                 | 設計判断の記録（ADR）。新しいテンプレートは `template.md` |
 | `docs/plan.md`                    | 初期構想メモ（歴史的記録。最新情報は上記を優先）          |
 
-大きな設計判断（外部APIの代替方針、DBスキーマ変更、アーキテクチャの変更など）をする際は `docs/decisions/` に新しいADRを追加する（`0002-`, `0003-`と連番）。
+大きな設計判断（外部APIの代替方針、アーキテクチャの変更など）をする際は `docs/decisions/` に新しいADRを追加する（`0003-`と連番）。
 
 ## タスク管理
 
@@ -31,12 +31,11 @@
 ## 技術スタック
 
 - フロント/API: Next.js（Vercelにデプロイ）
-- DB: Supabase (Postgres)
 - 構造化分類・検証: Jev API（未提供時はモック関数。方針は `docs/decisions/0001-jev-mock-fallback.md` 参照）
 - インサイト生成: Claude API
 - グラフ表示: Recharts等
 
-詳細は `docs/architecture.md` を参照。
+DBは持たない。口コミ投入から表示までを1リクエスト内で完結させる（`docs/decisions/0002-no-database-single-run-analysis.md` 参照）。詳細は `docs/architecture.md` を参照。
 
 ## 開発コマンド
 

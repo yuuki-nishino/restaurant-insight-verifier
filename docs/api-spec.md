@@ -36,14 +36,16 @@
 
 ### ② 検証クエリ（LLMのインサイト文チェック）
 
+DBを持たず1回の分析で完結する設計（[ADR-0002](./decisions/0002-no-database-single-run-analysis.md)）のため、検証対象は**今回投入されたデータの集計結果の中で完結する主張のみ**。「先月比」のような期間をまたぐ比較は行わない。
+
 **入力（state）**
 
-- LLMが生成したインサイト文の1主張（例：「待ち時間への不満が先月比で増加」）
-- 集計済みの構造化データ（該当月・前月の aspect=待ち時間 の件数）
+- LLMが生成したインサイト文の1主張（例：「待ち時間への不満が全体の35%を占め、最も多い」）
+- 今回の集計済み構造化データ（aspect別件数、全体件数など。[data-model.md](./data-model.md) の `AggregatedStats`）
 
 **分類させる質問（decision）**
 
-- is_supported: `["true", "false"]` — この主張は集計データで裏付けられるか
+- is_supported: `["true", "false"]` — この主張は集計データの数値と整合するか
 
 **出力例**
 
@@ -64,9 +66,11 @@ MVP実装時点でJevの一般公開APIが利用できない場合は、同じ�
 - 「以下の集計データだけを根拠に、店主向けのインサイトを3〜5個、箇条書きで生成して」
 - 各インサイトは「観測された事実（件数・割合）＋示唆」の2部構成にする
 - 集計データにない推測（因果関係の断定など）は避け、「〜の可能性がある」と書かせる
+- 過去の期間との比較（前月比・トレンド等）はデータを持っていないため書かせない。今回投入されたデータの中で完結する主張のみに限定する
 - 出力はJSON配列（`{claim_text, evidence}`の配列）で構造化させ、②の検証クエリにそのまま渡せる形にする
 
 ## 関連ドキュメント
 
 - 全体設計: [architecture.md](./architecture.md)
-- 入出力に関わるテーブル定義: [data-model.md](./data-model.md)
+- 入出力に関わるデータの型: [data-model.md](./data-model.md)
+- DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)

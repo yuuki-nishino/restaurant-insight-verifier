@@ -1,17 +1,61 @@
-# データモデル（Supabase / Postgres）
+# データ構造（処理ステージ間の型）
 
 最終更新: 2026-09-24
 
-| テーブル                 | 主なカラム                                                                                                                  | 用途                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `reviews`                | id, raw_text, source(手動/CSV), posted_at, created_at                                                                       | 投入された口コミの原文                        |
-| `review_classifications` | id, review_id(FK), aspect(味/接客/待ち時間/清潔さ/コスパ), sentiment(positive/negative/neutral), menu_mentioned, confidence | Jevの分類結果1件につき1行                     |
-| `insight_reports`        | id, period(対象月), summary_text, generated_at                                                                              | LLMが生成したインサイト文                     |
-| `insight_verifications`  | id, insight_report_id(FK), claim_text, is_supported(bool), confidence, note                                                 | Jevによる検証結果（インサイト文中の主張ごと） |
+本アプリはDBを持たず、口コミ投入からダッシュボード・インサイト表示までを1リクエスト内のメモリ上で処理する（[ADR-0002](./decisions/0002-no-database-single-run-analysis.md)）。以下は各処理ステージがやり取りするデータの形（TypeScript型のイメージ）。
 
-MVPでは店舗テーブル・ユーザーテーブルは作らず、単一店舗・単一ユーザー前提でシンプルに保つ。
+## 入力: 投入された口コミ
+
+```ts
+type ReviewInput = {
+  rawText: string;
+};
+```
+
+## Jev分類結果（口コミ1件ごと）
+
+```ts
+type ReviewClassification = {
+  reviewText: string;
+  aspect: { label: "味" | "接客" | "待ち時間" | "清潔さ" | "コスパ" | "その他"; confidence: number }[];
+  sentiment: { label: "positive" | "negative" | "neutral"; confidence: number };
+  menuMentioned: string | null;
+};
+```
+
+## 集計結果（全件のReviewClassificationから計算）
+
+```ts
+type AggregatedStats = {
+  totalReviews: number;
+  byAspect: Record<string, { count: number; positive: number; negative: number; neutral: number }>;
+  byMenu: Record<string, number>;
+  sentimentBreakdown: { positive: number; negative: number; neutral: number };
+};
+```
+
+## Claude生成インサイト
+
+```ts
+type InsightClaim = {
+  claimText: string; // 例: 「待ち時間への不満が全体の35%を占め、最も多い」
+  evidence: string; // 根拠となった集計データの説明
+};
+```
+
+## Jev検証結果（インサイトの主張ごと）
+
+```ts
+type ClaimVerification = {
+  claimText: string;
+  isSupported: boolean;
+  confidence: number;
+  note?: string;
+};
+```
 
 ## 関連ドキュメント
 
 - 全体設計: [architecture.md](./architecture.md)
-- このデータを生成/消費するAPI仕様: [api-spec.md](./api-spec.md)
+- 各ステージのAPI仕様: [api-spec.md](./api-spec.md)
+- DBを持たないことにした理由: [decisions/0002-no-database-single-run-analysis.md](./decisions/0002-no-database-single-run-analysis.md)
